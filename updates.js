@@ -1255,6 +1255,7 @@ function updateSkeleBtn(){
 
 //
 //Number updates
+// This function is called when the game is first loaded, and after the periodic progress updates as part of gameTimeout
 function updateLabels() { //Tried just updating as something changes, but seems to be better to do all at once all the time
 	var toUpdate;
 	//Resources (food, wood, metal, trimps, science). Per second will be handled in separate function, and called from job loop.
@@ -1383,45 +1384,53 @@ function updateSideTrimps(){
 	document.getElementById("jobsTitleUnemployed").innerHTML = prettify(free) + " workspace" + s;
 }
 
-function unlockBuilding(what) {
-	game.global.lastUnlock = new Date().getTime();
-	var locked = game.buildings[what].locked;
-	var elem = document.getElementById("buildingsHere");
-	elem.innerHTML = "";
-	game.buildings[what].locked = 0;
-	for (var item in game.buildings){
-		if (game.buildings[item].locked == 1) continue;
-		drawBuilding(item, elem);	
-	}
-	if (locked == 1){
-		document.getElementById("buildingsAlert").innerHTML = "!";
+/** unlockCommon
+ *	Common logic for unlocking something you can view/purchase via the lower-left region (structures, equipment, jobs, and upgrades)
+ *	(SMO) I hereby decree that this region shall be called Trimpsville
+ */
+function unlockCommon(type, what, drawFunc, displayOnly)
+{
+	if (!displayOnly) game.global.lastUnlock = new Date().getTime();
+	var wasLocked = (game[type][what].locked == 1);
+	game[type][what].locked = 0;
+	redrawCommon(type, type + 'Here', drawFunc);
+	if (wasLocked){
+		document.getElementById(type + "Alert").innerHTML = "!";
 		document.getElementById(what + "Alert").innerHTML = "!";
-	}
+	}    
 }
 
+function redrawCommon(type, hereId, drawFunc)
+{
+	var elem = { };
+	elem.innerHTML = "";
+	for (var item in game[type]){
+		if (game[type][item].locked == 1) continue;
+		drawFunc(item, elem);	
+	}
+	var realElem = document.getElementById(hereId);
+	realElem.innerHTML = elem.innerHTML;
+}
+
+function unlockBuilding(what) {
+    unlockCommon('buildings', what, drawBuilding);
+}
+
+
 function drawBuilding(what, where){
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
+	var html = '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
+    
+	where.innerHTML += html;
 }
 
 function unlockJob(what) {
-	game.global.lastUnlock = new Date().getTime();
-	var locked = game.jobs[what].locked;
-	game.jobs[what].locked = 0;
-	var elem = document.getElementById("jobsHere");
-	elem.innerHTML = "";
-	for (var item in game.jobs){
-		if (game.jobs[item].locked == 1) continue;
-		drawJob(item, elem);
-	}
-	if (locked == 1){
-		document.getElementById("jobsAlert").innerHTML = "!";
-		document.getElementById(what + "Alert").innerHTML = "!";
-	}
+	unlockCommon('jobs', what, drawJob);
 }
 
 function drawJob(what, where){
 	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'jobs\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer jobThing" id="' + what + '" onclick="buyJob(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
 }
+
 function refreshMaps(){
 	document.getElementById("mapsHere").innerHTML = "";
 	for (var item in game.global.mapsOwnedArray) {
@@ -1451,8 +1460,6 @@ function unlockMap(what) { //what here is the array index
 
 function unlockUpgrade(what, displayOnly) {
 	if (!displayOnly) game.global.lastUnlock = new Date().getTime();
-	var elem = document.getElementById("upgradesHere");
-	elem.innerHTML = "";
 	var upgrade = game.upgrades[what];
 	upgrade.locked = 0;
 	if (upgrade.prestiges){
@@ -1463,14 +1470,8 @@ function unlockUpgrade(what, displayOnly) {
 	if (!displayOnly) {
 		upgrade.allowed++;
 	}
-	for (var item in game.upgrades){
-		if (game.upgrades[item].locked == 1) continue;
-		drawUpgrade(item, elem);
-	}
-	if (!displayOnly){
-		document.getElementById("upgradesAlert").innerHTML = "!";
-		document.getElementById(what + "Alert").innerHTML = "!";
-	}
+
+	redrawCommon('upgrades', 'upgradesHere', drawUpgrade);
 }
 
 function drawUpgrade(what, where){
