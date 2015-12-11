@@ -1331,16 +1331,27 @@ function checkAndDisplayUpgrades() {
 		else if (!redrawNeeded)
 			document.getElementById(itemC + "Owned").innerHTML = getUpgradeOwnedText(toUpdate);
 	}
-	if (redrawNeeded)
+	if (redrawNeeded) {
 		redrawUpgrades();
+	}
 }
 
 function checkAndDisplayEquipment() {
-		for (var itemD in game.equipment){
+	var redrawNeeded = false;
+	for (var itemD in game.equipment){
 		var toUpdate = game.equipment[itemD];
 		if (toUpdate.locked == 1) continue;
-		if (document.getElementById(itemD) === null) unlockEquipment(itemD, true);
-		document.getElementById(itemD + "Owned").innerHTML = toUpdate.level;
+		// (1) if there's no element for this item, we need to add it
+		// (2) if there IS an element for this item, then we need to update it
+		//		However, there is no point in doing so if we're going to redraw the whole thing anyway.
+		if (document.getElementById(itemD) === null) {
+			redrawNeeded = true;
+		} else if (!redrawNeeded) {
+			document.getElementById(itemD + "Owned").innerHTML = toUpdate.level;
+		}
+	}
+	if (redrawNeeded) {
+		redrawEquipment();
 	}
 }
 
@@ -1403,12 +1414,14 @@ function updateSideTrimps(){
  *	Common logic for unlocking something you can view/purchase via the lower-left region (structures, equipment, jobs, and upgrades)
  *	(SMO) I hereby decree that this region shall be called Trimpsville
  */
-function unlockCommon(type, what, drawFunc, displayOnly)
+function unlockCommon(type, what, drawFunc)
 {
-	if (!displayOnly) game.global.lastUnlock = new Date().getTime();
+	game.global.lastUnlock = new Date().getTime();
 	var wasLocked = (game[type][what].locked == 1);
 	game[type][what].locked = 0;
-	redrawCommon(type, type + 'Here', drawFunc);
+	if (drawFunc !== undefined) {
+		redrawCommon(type, type + 'Here', drawFunc);
+	}
 	if (wasLocked){
 		document.getElementById(type + "Alert").innerHTML = "!";
 		document.getElementById(what + "Alert").innerHTML = "!";
@@ -1592,21 +1605,26 @@ function getWarpstationColor() {
 
 }
 
-function unlockEquipment(what, fromCheck) {
+function unlockEquipment(what) {
 	game.global.lastUnlock = new Date().getTime();
 	var equipment = game.equipment[what];
-	var elem = document.getElementById("equipmentHere");
 	equipment.locked = 0;
-	if (!fromCheck){
-		elem.innerHTML = "";
-		checkAndDisplayEquipment();
-		return;
-	}
+	// this will actually be performed on the next timer tick
+	// redrawCommon('equipment', 'equipmentHere', drawEquipment);
+}
+
+function redrawEquipment() {
+	redrawCommon('equipment', 'equipmentHere', drawEquipment);
+}
+
+function drawEquipment(what, where) {
+	var equipment = game.equipment[what];
 	var numeral = "";
 	if (equipment.prestige > 1){
 		numeral = romanNumeral(equipment.prestige);
 	}
-	elem.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'equipment\',event)" onmouseout="tooltip(\'hide\')" class="noselect pointer thing" id="' + what + '" onclick="buyEquipment(\'' + what + '\')"><span class="thingName">' + what + ' <span id="' + what + 'Numeral">' + numeral + '</span></span><br/><span class="thingOwned">Level: <span id="' + what + 'Owned">0</span></span></div>';
+	var ownedText = equipment.level;
+	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'equipment\',event)" onmouseout="tooltip(\'hide\')" class="noselect pointer thing" id="' + what + '" onclick="buyEquipment(\'' + what + '\')"><span class="thingName">' + what + ' <span id="' + what + 'Numeral">' + numeral + '</span></span><br/><span class="thingOwned">Level: <span id="' + what + 'Owned">' + ownedText + '</span></span></div>';
 }
 
 function getBarColor(percent, forText) {
