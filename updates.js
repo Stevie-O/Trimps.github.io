@@ -1513,6 +1513,9 @@ function unlockCommon(group, what, drawFunc)
 	setAlert(what, group);
 }
 
+/** redrawCommon(group, parent element ID, rendering-function)
+ *	Common logic for regenerating the HTML for all the unlocked items in a group
+ */
 function redrawCommon(group, hereId, drawFunc)
 {
 	var elem = { };
@@ -1523,6 +1526,28 @@ function redrawCommon(group, hereId, drawFunc)
 	}
 	var realElem = document.getElementById(hereId);
 	realElem.innerHTML = elem.innerHTML;
+}
+
+/** drawCommon(where, what, group, rendering-function)
+ *	Common logic for generating the HTML for buildings, jobs, upgrades, and equipment
+ */
+function drawCommon(where, what, group, className, buyMethodName, hasAlert, numeral, hasLevel, ownedText)
+{
+	if (className != '') className = ' ' + className;
+	
+	var html = '<div onmouseover="tooltip(\'' + what + '\',\'' + group + '\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer' + className + '" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName">';
+	if (hasAlert) {
+		html += '<span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText(group, what) + '</span>';
+	}
+	html += what;
+	if (numeral != null) {
+		html += ' <span id="' + what + 'Numeral">' + numeral + '</span>';
+	}
+	html += '</span><br/>';
+	if (hasLevel) html += 'Level: ';
+	html += '<span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
+    
+	where.innerHTML += html;
 }
 
 function getCommonAlertText(group, what)
@@ -1541,9 +1566,7 @@ function redrawBuildings()
 }
 
 function drawBuilding(what, where){
-	var html = '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('buildings', what) + '</span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
-    
-	where.innerHTML += html;
+	drawCommon(where, what, 'buildings', 'buildingThing', 'buyBuilding', true, null, false, '0');
 }
 
 function unlockJob(what) {
@@ -1556,7 +1579,7 @@ function redrawJobs()
 }
 
 function drawJob(what, where){
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'jobs\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer jobThing" id="' + what + '" onclick="buyJob(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('jobs', what) + '</span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
+	drawCommon(where, what, 'jobs', 'jobThing', 'buyJob', true, null, false, '0');
 }
 
 function refreshMaps(){
@@ -1627,7 +1650,7 @@ function drawUpgrade(what, where){
 		upgrade.cost.resources[resName] = getNextPrestigeCost(what);
 	}
 	var ownedText = getUpgradeOwnedText(upgrade);
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'upgrades\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer upgradeThing" id="' + what + '" onclick="buyUpgrade(\'' + what + '\')"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('upgrades', what) + '</span><span class="thingName">' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
+	drawCommon(where, what, 'upgrades', 'upgradeThing', 'buyUpgrade', true, null, false, ownedText);
 }
 
 function checkButtons(what) {
@@ -1725,7 +1748,7 @@ function drawEquipment(what, where) {
 		numeral = romanNumeral(equipment.prestige);
 	}
 	var ownedText = equipment.level;
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'equipment\',event)" onmouseout="tooltip(\'hide\')" class="noselect pointer thing" id="' + what + '" onclick="buyEquipment(\'' + what + '\')"><span class="thingName">' + what + ' <span id="' + what + 'Numeral">' + numeral + '</span></span><br/><span class="thingOwned">Level: <span id="' + what + 'Owned">' + ownedText + '</span></span></div>';
+	drawCommon(where, what, 'equipment', '', 'buyEquipment', false, numeral, true, ownedText);
 }
 
 function getBarColor(percent, forText) {
