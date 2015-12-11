@@ -1372,6 +1372,7 @@ function getBuildingItemPrice(toBuy, costItem, isEquipment){
 
 function buyBuilding(what, confirmed) {
 	if (game.options.menu.lockOnUnlock.enabled == 1 && (new Date().getTime() - 1000 <= game.global.lastUnlock)) return;
+	if (isThingUserLocked(what)) return;
 	var toBuy = game.buildings[what];
     if (typeof toBuy === 'undefined') return;
     var canAfford = canAffordBuilding(what);
@@ -1542,6 +1543,7 @@ function trapThings() {
 
 function buyJob(what) {
 	if (game.options.menu.lockOnUnlock.enabled == 1 && (new Date().getTime() - 1000 <= game.global.lastUnlock)) return;
+	if (isThingUserLocked(what)) return;
 	if (game.global.firing){
 		if (game.jobs[what].owned < 1) return;
 		game.resources.trimps.employed -= (game.jobs[what].owned < game.global.buyAmt) ? game.jobs[what].owned : game.global.buyAmt;
@@ -1627,6 +1629,7 @@ function canAffordCoordinationTrimps(){
 
 function buyUpgrade(what, confirmed) {
 	if (game.options.menu.lockOnUnlock.enabled == 1 && (new Date().getTime() - 1000 <= game.global.lastUnlock)) return;
+	if (isThingUserLocked(what)) return;
     if (what == "Coordination") {
        if (!canAffordCoordinationTrimps()) return;
     }
@@ -2967,6 +2970,7 @@ function updateNomStacks(number){
 
 function buyEquipment(what) {
 	if (game.options.menu.lockOnUnlock.enabled == 1 && (new Date().getTime() - 1000 <= game.global.lastUnlock)) return;
+	if (isThingUserLocked(what)) return;
 	var toBuy = game.equipment[what];
 	if (typeof toBuy === 'undefined') return;
 	var canAfford = canAffordBuilding(what, null, null, true);
