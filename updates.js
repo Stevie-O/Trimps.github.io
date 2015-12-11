@@ -1291,14 +1291,14 @@ function updateLabels() { //Tried just updating as something changes, but seems 
 		toUpdate = game.buildings[itemA];
 		if (toUpdate.locked == 1) continue;
 		var elem = document.getElementById(itemA + "Owned");
-		if (elem === null){
-			unlockBuilding(itemA);
+		if (elem === null) {
+			redrawBuildings();
 			elem = document.getElementById(itemA + "Owned");
 		}
 		elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		if (itemA == "Trap") {
-		document.getElementById("trimpTrapText").innerHTML = prettify(toUpdate.owned);
-		document.getElementById("trimpTrapText2").innerHTML = prettify(toUpdate.owned);
+			document.getElementById("trimpTrapText").innerHTML = prettify(toUpdate.owned);
+			document.getElementById("trimpTrapText2").innerHTML = prettify(toUpdate.owned);
 		}
 	}
 	//Jobs, check PS here and stuff. Trimps per second is handled by breed() function
@@ -1310,8 +1310,12 @@ function updateLabels() { //Tried just updating as something changes, but seems 
 			updatePs(toUpdate);
 			continue;
 		}
-		if (document.getElementById(itemB) === null) unlockJob(itemB);
-		document.getElementById(itemB + "Owned").innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
+		var elem = document.getElementById(itemB + "Owned");
+		if (elem === null) {
+			redrawJobs();
+			elem = document.getElementById(itemB + "Owned");
+		}
+		elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		var perSec = (toUpdate.owned * toUpdate.modifier);
 		updatePs(toUpdate);
 	}
@@ -1450,6 +1454,10 @@ function unlockBuilding(what) {
     unlockCommon('buildings', what, drawBuilding);
 }
 
+function redrawBuildings()
+{
+	redrawCommon('buildings', 'buildingsHere', drawBuilding);
+}
 
 function drawBuilding(what, where){
 	var html = '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
@@ -1459,6 +1467,11 @@ function drawBuilding(what, where){
 
 function unlockJob(what) {
 	unlockCommon('jobs', what, drawJob);
+}
+
+function redrawJobs()
+{
+	redrawCommon('jobs', 'jobsHere', drawJob);
 }
 
 function drawJob(what, where){
