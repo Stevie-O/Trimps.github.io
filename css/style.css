@@ -314,6 +314,11 @@ overflow-x: hidden;
     border: 1px solid white;
 }
 
+#unlockAllBtn {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid white;
+}
+
 .nav-tabs>li {
     background: rgba(255, 255, 255, 0.25);
 }
@@ -392,6 +397,29 @@ overflow-x: hidden;
     font-size: .85vw;
     border: 1px solid white;
 }
+
+/* .lock-glyph and userLock<N> classes are only present when the Lock tab is active */
+.lock-glyph {
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	top: initial;
+	left: initial;
+}
+
+.thing.userLock0 {
+    background-color: #5cb85c;
+	position: relative;
+}
+
+.thing.userLock1 {
+	position: relative;
+}
+
+.thing.userLock2 {
+	position: relative;
+}
+/* **************************************************************** */
 
 #battleContainer {
     border: 2px solid white;

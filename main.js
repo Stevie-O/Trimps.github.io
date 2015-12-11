@@ -220,10 +220,15 @@ function load(saveString, autoLoad) {
                     var botSave = midSave[c];
                     if (typeof botSave === 'undefined' || botSave === null) continue;
                     
-                    if (c == 'alertStatus' && botSave == true) {
-                        setAlert(b, a);
+                    if (c == 'alertStatus') {
+						if (botSave == true) {
+							setAlert(b, a);
+						}
                         continue;
-                    }
+                    } else if (c == 'userLock') {
+						setUserLock(b, a, botSave, true);
+						continue;
+					}
 
                     midGame[c] = botSave;
                 }

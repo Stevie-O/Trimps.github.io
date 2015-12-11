@@ -122,6 +122,10 @@ function tooltip(what, isItIn, event, textString, attachFunction, numCheck, rena
 		elem.style.left = "32.5%";
 		elem.style.top = "25%";
 	}
+	if (what == "Unlock All"){
+		tooltipText = "You can quickly unhide and unlock all of your upgrades with this button.";
+		costText = "";
+	}
 	if (what == "Respec"){
 		tooltipText = "You can respec your perks once per portal. Clicking cancel after clicking this button will not consume your respec.";
 		costText = "";
@@ -325,6 +329,20 @@ function tooltip(what, isItIn, event, textString, attachFunction, numCheck, rena
 		else
 		tooltipText = tipSplit[0] + prettify(toTip[tipSplit[1]]) + tipSplit[2];
 	}
+	if (game[isItIn] != null && game[isItIn][what] != null && game[isItIn][what].userLock != null) {
+		var lockMode = game[isItIn][what].userLock;
+		if (game.global.buyTab == 'lock') {
+			switch (lockMode) {
+				case 0: tooltipText += '<hr>This purchase is unlocked; you can buy it on the appropriate tabs.'; break;
+				case 1: tooltipText += '<hr>This purchase is visible but disabled on all other tabs.'; break;
+				case 2: tooltipText += '<hr>This purchase is hidden from all other tabs.'; break;				
+			}
+		} else { 
+			if (lockMode != 0) {
+				tooltipText += '<hr>You\'ve locked this purchase to prevent yourself from buying it. To unlock it, go to the Lock tab and click on it until it turns green.';
+			}
+		}
+	}	
 	if (typeof tooltipText.split('~') !== 'undefined') {
 		var percentIncrease = game.upgrades.Gymystic.done;
 		var text = ".";
@@ -348,6 +366,45 @@ function cancelTooltip(){
 	tooltip("hide");
 	tooltipUpdateFunction = "";
 	customUp = 0;
+}
+
+/** isThing(what)
+  *
+  * e.g. isThing('Shed')
+  *
+  * Is this a "thing" (building, job, upgrade, or equipment)?
+  */
+function isThing(what)
+{
+	return (what in game.thing2group);
+}
+
+/** getThingDef(what)
+  *
+  * e.g. getThingDef('Shed')
+  *
+  * Returns the specified thing's definition
+  */
+function getThingDef(what)
+{
+	var group = game.thing2group[what];
+	if (group == undefined) return undefined;
+	return game[group][what];
+}
+
+/** isThingUserLocked(what)
+  *
+  * e.g. isThingUserLocked('Shed')
+  *
+  * If what is a thing, returns true if and only if the user has locked that thing
+  * to prevent it from being purchased.
+  */
+function isThingUserLocked(what)
+{
+	var def = getThingDef(what);
+	if (def != null)
+		return def.userLock > 0;
+	return false;
 }
 
 /** clearAlert(item, group)
@@ -398,7 +455,6 @@ function clearGroupAlert(group)
 function setAlert(what, group)
 {
 	var obj = game[group][what];
-	console.log('setting alert on ' + group + '.' + what);
 	if (!obj.alertStatus) {
 		// remove the ! from the current DOM (note: alertElem will be null while we're loading a saved game)
 		var alertElem = document.getElementById(what + "Alert");
@@ -424,6 +480,94 @@ function setGroupAlert(group)
 		document.getElementById(group + "Alert").innerHTML = "!";
 	}
 }
+
+/** setUserLock(item, group, newValue, loadingGame)
+  *
+  * Sets the user-locked status on an item to newValue.
+  * 0 = Not locked (normal/default)
+  * 1 = Disabled
+  * 2 = Hidden
+  *
+  */
+function setUserLock(item, group, newValue, loadingGame)
+{
+	var def = game[group][item];
+	var oldValue = def.userLock;
+	// already set, thank you
+	if (oldValue == newValue) return;
+	// If there's an alert status on this item (normally this will only happen when restoring a saved game),
+	// we need to clear the alert status off of the item's original tab and put it on the Lock tab.
+	if (def.alertStatus) {
+		if (oldValue == 0) {
+			clearGroupAlert(group);
+			setGroupAlert('lock');
+		} else if (newValue == 0) {
+			clearGroupAlert('lock');
+			setGroupAlert(group);
+		}
+	}
+	def.userLock = newValue;
+	var elem = document.getElementById(item);
+	if (elem != null) {
+		if (game.global.buyTab != 'lock') {
+			// this should normally only happen if we're restoring a saved game
+			elem.style.display = (newValue == 2 ? 'none' : '');
+		} else {
+			replaceClass(elem, 'userLock[012]', 'userLock' + newValue);
+			var glyphElem = document.getElementById(item + '-lock-glyph');
+			if (glyphElem != null) {
+				glyphElem.className = getUserLockGlyphClassName(newValue);
+			}
+		}
+	}
+}
+
+function getUserLockGlyphClassName(userLockMode) {
+	switch (userLockMode) {
+		case 0: return 'lock-glyph'; break;
+		case 1: return 'lock-glyph glyphicon glyphicon-lock'; break;
+		case 2: return 'lock-glyph glyphicon glyphicon-eye-close'; break;
+	}
+}
+
+function replaceClass(elem, oldClass, newClass)
+{
+	var cn = elem.className;
+	elem.className = cn.replace(new RegExp('\\b' + oldClass + '\\b'), newClass);
+}
+
+/** cycleUserLock(item, group)
+  *
+  * Cycle the user-locked status on an item to the next one in the sequence
+  * 0 = Not locked (normal/default)
+  * 1 = Disabled
+  * 2 = Hidden
+  *
+  * This function is used to implement the on-click logic on the Lock tab.
+  */
+
+function cycleUserLock(item, group)
+{
+	var def = game[group][item];
+	var cur = def.userLock;
+	var next = (cur + 1) % 3;
+	setUserLock(item, group, next, false);
+}
+
+/** userUnlockAll()
+  *
+  * Clears all user locks.
+  */
+
+function userUnlockAll()
+{
+	for (var thing in game.thing2group)
+	{
+		var group = game.thing2group[thing];
+		setUserLock(thing, group, 0, false);
+	}
+}
+
 
 function unlockTooltip(){
 	game.global.lockTooltip = false;
@@ -1167,13 +1311,25 @@ function filterTabs (what) {
 		// we're already filtering to this one, don't do it again
 		return;
 	}
+	var lockChanged = (game.global.buyTab == 'lock' || what == 'lock');
 	enableDisableTab(game.global.buyTab, false);
 	game.global.buyTab = what;
 	enableDisableTab(what, true);
+	if (lockChanged) {
+		// show lockmessage if in lock tab
+		document.getElementById('lockMessage').style.display = (what == 'lock') ? '' : 'none';
+		// hide fire button if in lock tab
+		document.getElementById('fireBtn').style.display     = (what == 'lock') ? 'none' : '';
+	}
 	var tabs = ["buildings", "jobs", "upgrades", "equipment"];
-	for (var tab in tabs){
-		tab = tabs[tab];
-		document.getElementById(tab + "Container").style.display = (what == "all" || tab == what) ? "block" : "none";
+	var redrawFuncs = [redrawBuildings, redrawJobs, redrawUpgrades, redrawEquipment];
+	for (var tabidx in tabs){
+		var tab = tabs[tabidx];
+		document.getElementById(tab + "Container").style.display = (what == "all" || tab == what || what == 'lock') ? "block" : "none";
+		if (lockChanged) {
+			redrawFuncs[tabidx]();
+			checkButtons(tab);
+		}
 	}
 }
 
@@ -1362,16 +1518,19 @@ function updateLabels() { //Tried just updating as something changes, but seems 
 		}
 	}
 	updateSideTrimps();
+	var lockTab = (game.global.buyTab == 'lock');
 	//Buildings, trap is the only unique building, needs to be displayed in trimp area as well
 	for (var itemA in game.buildings){
 		toUpdate = game.buildings[itemA];
 		if (toUpdate.locked == 1) continue;
-		var elem = document.getElementById(itemA + "Owned");
-		if (elem === null) {
-			redrawBuildings();
-			elem = document.getElementById(itemA + "Owned");
+		if (lockTab || toUpdate.userLock != 2) {
+			var elem = document.getElementById(itemA + "Owned");
+			if (elem === null) {
+				redrawBuildings();
+				elem = document.getElementById(itemA + "Owned");
+			}
+			elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		}
-		elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		if (itemA == "Trap") {
 			document.getElementById("trimpTrapText").innerHTML = prettify(toUpdate.owned);
 			document.getElementById("trimpTrapText2").innerHTML = prettify(toUpdate.owned);
@@ -1386,12 +1545,14 @@ function updateLabels() { //Tried just updating as something changes, but seems 
 			updatePs(toUpdate);
 			continue;
 		}
-		var elem = document.getElementById(itemB + "Owned");
-		if (elem === null) {
-			redrawJobs();
-			elem = document.getElementById(itemB + "Owned");
+		if (lockTab || toUpdate.userLock != 2) {
+			var elem = document.getElementById(itemB + "Owned");
+			if (elem === null) {
+				redrawJobs();
+				elem = document.getElementById(itemB + "Owned");
+			}
+			elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		}
-		elem.innerHTML = (game.options.menu.menuFormatting.enabled) ? prettify(toUpdate.owned) : toUpdate.owned;
 		var perSec = (toUpdate.owned * toUpdate.modifier);
 		updatePs(toUpdate);
 	}
@@ -1405,10 +1566,12 @@ function updateLabels() { //Tried just updating as something changes, but seems 
   */
 function checkAndDisplayUpgrades() {
 	var redrawNeeded = false;
+	var hideUserLock2 = (game.global.buyTab != 'lock');
 	for (var itemC in game.upgrades){
 		toUpdate = game.upgrades[itemC];
 		if (toUpdate.allowed - toUpdate.done >= 1) toUpdate.locked = 0;
 		if (toUpdate.locked == 1) continue;
+		if (hideUserLock2 && toUpdate.userLock == 2) continue;
 		// (1) if there's no element for this item, we need to add it
 		// (2) if there IS an element for this item, then we need to update it
 		//		However, there is no point in doing so if we're going to redraw the whole thing anyway.
@@ -1424,9 +1587,11 @@ function checkAndDisplayUpgrades() {
 
 function checkAndDisplayEquipment() {
 	var redrawNeeded = false;
+	var hideUserLock2 = (game.global.buyTab != 'lock');
 	for (var itemD in game.equipment){
 		var toUpdate = game.equipment[itemD];
 		if (toUpdate.locked == 1) continue;
+		if (hideUserLock2 && toUpdate.userLock == 2) continue;
 		// (1) if there's no element for this item, we need to add it
 		// (2) if there IS an element for this item, then we need to update it
 		//		However, there is no point in doing so if we're going to redraw the whole thing anyway.
@@ -1518,10 +1683,15 @@ function unlockCommon(group, what, drawFunc)
  */
 function redrawCommon(group, hereId, drawFunc)
 {
+	var hideUserLock2 = (game.global.buyTab != 'lock');
 	var elem = { };
+	var any = false;
 	elem.innerHTML = "";
 	for (var item in game[group]){
-		if (game[group][item].locked == 1) continue;
+		var thingdef = game[group][item];
+		if (thingdef.locked == 1) continue;
+		if (hideUserLock2 && thingdef.userLock == 2) continue;
+		any = true;
 		drawFunc(item, elem);	
 	}
 	var realElem = document.getElementById(hereId);
@@ -1533,9 +1703,19 @@ function redrawCommon(group, hereId, drawFunc)
  */
 function drawCommon(where, what, group, className, buyMethodName, hasAlert, numeral, hasLevel, ownedText)
 {
+	var lockTab = false;
+	var userLock;
+	
 	if (className != '') className = ' ' + className;
 	
-	var html = '<div onmouseover="tooltip(\'' + what + '\',\'' + group + '\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer' + className + '" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName">';
+	if (game.global.buyTab == 'lock') {
+		lockTab = true;
+		userLock = game[group][what].userLock;
+		className += ' userLock' + userLock;
+		buyMethodName = 'cycleUserLock';
+	}
+	
+	var html = '<div onmouseover="tooltip(\'' + what + '\',\'' + group + '\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer' + className + '" id="' + what + '" onclick="' + buyMethodName + '(\'' + what + '\', \'' + group + '\')"><span class="thingName">';
 	if (hasAlert) {
 		html += '<span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText(group, what) + '</span>';
 	}
@@ -1545,7 +1725,11 @@ function drawCommon(where, what, group, className, buyMethodName, hasAlert, nume
 	}
 	html += '</span><br/>';
 	if (hasLevel) html += 'Level: ';
-	html += '<span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
+	html += '<span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span>';
+	if (lockTab) {
+		html += '<span id="' + what + '-lock-glyph" class="' + getUserLockGlyphClassName(userLock) + '"></span>';
+	}
+	html += '</div>';
     
 	where.innerHTML += html;
 }
@@ -1715,6 +1899,12 @@ function updateButtonColor(what, canAfford, isJob) {
 	if (elem === null){
 		return;
 	}
+	// if they're on the Lock tab, we don't want to try colorizing the buttons based on whether or not they're purchasable
+	if (game.global.buyTab == 'lock') return;
+	// if it's user-locked, act like they can't afford it
+	if (isThingUserLocked(what))
+		canAfford = isJob = false;
+
 	if (game.options.menu.lockOnUnlock.enabled == 1 && (new Date().getTime() - 1000 <= game.global.lastUnlock)) canAfford = false;
 	var color = (canAfford) ? "black" : "grey";
 	if (isJob && game.global.firing === true) color = (game.jobs[what].owned >= 1) ? "red" : "grey";

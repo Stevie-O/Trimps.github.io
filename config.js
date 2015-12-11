@@ -4476,6 +4476,19 @@ for (var i = 0; i < alertable_groups.length; i++) {
 		itemdef.userLock = 0;
 	}
 }
+// this is clunky, but fixing it will requires a complete restructuring of the 'game' object and reworking the savegame stuff
+// build up a map so that code that only knows the thing name can access the thing's definition
+var thing_groups = [ 'buildings', 'jobs', 'upgrades', 'equipment' ];
+toReturn.thing2group = {};
+for (var i = 0; i < thing_groups.length; i++) {
+	var group = thing_groups[i];
+	var groupdef = toReturn[group];
+	for (var item in groupdef)
+	{
+		toReturn.thing2group[item] = group;
+	}
+}
+
 
 return toReturn;
 }
