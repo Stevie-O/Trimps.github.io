@@ -219,6 +219,11 @@ function load(saveString, autoLoad) {
 					}
                     var botSave = midSave[c];
                     if (typeof botSave === 'undefined' || botSave === null) continue;
+                    
+                    if (c == 'alertStatus' && botSave == true) {
+                        setAlert(b, a);
+                        continue;
+                    }
 
                     midGame[c] = botSave;
                 }

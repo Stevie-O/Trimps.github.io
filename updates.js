@@ -21,9 +21,10 @@
 var customUp;
 var tooltipUpdateFunction = "";
 function tooltip(what, isItIn, event, textString, attachFunction, numCheck, renameBtn, noHide) {
-	
-	if (document.getElementById(what + "Alert") !== null)	document.getElementById(what + "Alert").innerHTML = "";
-	if (document.getElementById(isItIn + "Alert") !== null)	document.getElementById(isItIn + "Alert").innerHTML = "";
+
+	if (document.getElementById(what + "Alert") !== null) {
+		clearAlert(what, isItIn);
+	}
 	if (game.global.lockTooltip) return;
 	
 	var elem = document.getElementById("tooltipDiv");
@@ -347,6 +348,81 @@ function cancelTooltip(){
 	tooltip("hide");
 	tooltipUpdateFunction = "";
 	customUp = 0;
+}
+
+/** clearAlert(item, group)
+  * e.g. clearAlert('Shed', 'buildings')
+  *
+  * Clears the alert status of an item.
+  * When appropriate, also clears the alert status of groups the item belongs to,
+  *
+  * If the item does not currently have an alert on it, does nothing.
+  */
+
+function clearAlert(what, group)
+{
+	var obj = game[group][what];
+	if (obj.alertStatus) {
+		// remove the ! from the current DOM
+		document.getElementById(what + "Alert").innerHTML = "";
+		// clear the internal indicators
+		obj.alertStatus = false;
+		clearGroupAlert(group);
+	}
+}
+
+/** clearGroupAlert(group)
+  * e.g. clearGroupAlert('buildings')
+  *
+  * Should only be called by clearAlert().
+  * DO NOT CALL if there isn't an existing alert on this group!
+  */
+
+function clearGroupAlert(group)
+{
+	// one less alert on this group
+	if (--game.alertCache[group] == 0) {
+		document.getElementById(group + "Alert").innerHTML = "";
+	}
+}
+
+/** setAlert(item, group)
+  * e.g. setAlert('Shed', 'buildings')
+  *
+  * Sets the alert status of an item.
+  * Automatically sets the alert status of any groups the item belongs to.
+  *
+  * If the item is already alerted,, does nothing.
+  */
+
+function setAlert(what, group)
+{
+	var obj = game[group][what];
+	console.log('setting alert on ' + group + '.' + what);
+	if (!obj.alertStatus) {
+		// remove the ! from the current DOM (note: alertElem will be null while we're loading a saved game)
+		var alertElem = document.getElementById(what + "Alert");
+		if (alertElem != null)
+			alertElem.innerHTML = "!";
+		// clear the internal indicators
+		obj.alertStatus = true;
+		setGroupAlert(group);
+	}
+}
+
+/** setGroupAlert(group)
+  * e.g. setGroupAlert('buildings')
+  *
+  * Should only be called by setAlert().
+  * DO NOT CALL if you didn't just set a new alert!
+  */
+
+function setGroupAlert(group)
+{
+	// one more alert on this group
+	if (game.alertCache[group]++ == 0) {
+		document.getElementById(group + "Alert").innerHTML = "!";
+	}
 }
 
 function unlockTooltip(){
@@ -1420,35 +1496,40 @@ function updateSideTrimps(){
 	document.getElementById("jobsTitleUnemployed").innerHTML = prettify(free) + " workspace" + s;
 }
 
-/** unlockCommon
+/** unlockCommon(group, item, rendering-function)
  *	Common logic for unlocking something you can view/purchase via the lower-left region (structures, equipment, jobs, and upgrades)
  *	(SMO) I hereby decree that this region shall be called Trimpsville
  */
-function unlockCommon(type, what, drawFunc)
+function unlockCommon(group, what, drawFunc)
 {
 	game.global.lastUnlock = new Date().getTime();
-	var wasLocked = (game[type][what].locked == 1);
-	game[type][what].locked = 0;
+	var wasLocked = (game[group][what].locked == 1);
+	if (!wasLocked)
+		return;
+	game[group][what].locked = 0;
 	if (drawFunc !== undefined) {
-		redrawCommon(type, type + 'Here', drawFunc);
+		redrawCommon(group, group + 'Here', drawFunc);
 	}
-	if (wasLocked){
-		document.getElementById(type + "Alert").innerHTML = "!";
-		document.getElementById(what + "Alert").innerHTML = "!";
-	}    
+	setAlert(what, group);
 }
 
-function redrawCommon(type, hereId, drawFunc)
+function redrawCommon(group, hereId, drawFunc)
 {
 	var elem = { };
 	elem.innerHTML = "";
-	for (var item in game[type]){
-		if (game[type][item].locked == 1) continue;
+	for (var item in game[group]){
+		if (game[group][item].locked == 1) continue;
 		drawFunc(item, elem);	
 	}
 	var realElem = document.getElementById(hereId);
 	realElem.innerHTML = elem.innerHTML;
 }
+
+function getCommonAlertText(group, what)
+{
+	return game[group][what].alertStatus ? '!' : '';
+}
+
 
 function unlockBuilding(what) {
     unlockCommon('buildings', what, drawBuilding);
@@ -1460,7 +1541,7 @@ function redrawBuildings()
 }
 
 function drawBuilding(what, where){
-	var html = '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
+	var html = '<div onmouseover="tooltip(\'' + what + '\',\'buildings\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer buildingThing" id="' + what + '" onclick="buyBuilding(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('buildings', what) + '</span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
     
 	where.innerHTML += html;
 }
@@ -1475,7 +1556,7 @@ function redrawJobs()
 }
 
 function drawJob(what, where){
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'jobs\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer jobThing" id="' + what + '" onclick="buyJob(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge"></span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
+	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'jobs\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer jobThing" id="' + what + '" onclick="buyJob(\'' + what + '\')"><span class="thingName"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('jobs', what) + '</span>' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">0</span></div>';
 }
 
 function refreshMaps(){
@@ -1514,6 +1595,7 @@ function unlockUpgrade(what) {
 		upgrade.cost.resources[resName] = getNextPrestigeCost(what);
 	}
 	upgrade.allowed++;
+	setAlert(what, 'upgrades');
 	// this will actually be performed on the next timer tick
 	// redrawCommon('upgrades', 'upgradesHere', drawUpgrade);
 }
@@ -1545,7 +1627,7 @@ function drawUpgrade(what, where){
 		upgrade.cost.resources[resName] = getNextPrestigeCost(what);
 	}
 	var ownedText = getUpgradeOwnedText(upgrade);
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'upgrades\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer upgradeThing" id="' + what + '" onclick="buyUpgrade(\'' + what + '\')"><span id="' + what + 'Alert" class="alert badge"></span><span class="thingName">' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
+	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'upgrades\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer upgradeThing" id="' + what + '" onclick="buyUpgrade(\'' + what + '\')"><span id="' + what + 'Alert" class="alert badge">' + getCommonAlertText('upgrades', what) + '</span><span class="thingName">' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
 }
 
 function checkButtons(what) {

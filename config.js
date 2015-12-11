@@ -4462,6 +4462,21 @@ var toReturn = {
 		quickTrimps: false
 	}
 };
+// apply some common logic to everything (rather than requiring an error-prone copy-and-paste job on a number of things)
+var alertable_groups = [ 'buildings', 'jobs', 'upgrades' ];
+toReturn.alertCache = { all: 0, lock: 0 };
+for (var i = 0; i < alertable_groups.length; i++) {
+	var group = alertable_groups[i];
+	var groupdef = toReturn[group];
+	toReturn.alertCache[group] = 0;
+	for (var item in groupdef)
+	{
+		var itemdef = groupdef[item];
+		itemdef.alertStatus = false;
+		itemdef.userLock = 0;
+	}
+}
+
 return toReturn;
 }
 var game = newGame();
