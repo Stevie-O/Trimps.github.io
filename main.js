@@ -348,7 +348,7 @@ function load(saveString, autoLoad) {
 			filterMessage(messageBool, true);
 		}
 	}
-	game.global.buyTab = "all";
+	game.global.buyTab = "";
 	filterTabs("all");
 	if (game.global.mapsUnlocked) unlockMapStuff();
 	repeatClicked(true);

@@ -1083,9 +1083,14 @@ function filterMessage(what, updateOnly){ //send true for updateOnly
 	
 	log.scrollTop = log.scrollHeight;
 }
+
 //
 //Menu Stuff
 function filterTabs (what) {
+	if (game.global.buyTab == what) {
+		// we're already filtering to this one, don't do it again
+		return;
+	}
 	enableDisableTab(game.global.buyTab, false);
 	game.global.buyTab = what;
 	enableDisableTab(what, true);
@@ -1097,6 +1102,7 @@ function filterTabs (what) {
 }
 
 function enableDisableTab(what, enable){
+	if (what == '') return;
 	document.getElementById(what + "Tab").style.background = (enable) ? "rgba(0,0,0,0)" : "rgba(255,255,255,0.25)";
 	document.getElementById(what + "A").style.borderBottom = (enable) ? "0" : "1px solid #ddd";
 }
