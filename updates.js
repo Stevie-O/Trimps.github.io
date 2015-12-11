@@ -1310,14 +1310,29 @@ function updateLabels() { //Tried just updating as something changes, but seems 
 		updatePs(toUpdate);
 	}
 	//Upgrades, owned will only exist if 'allowed' exists on object
+	checkAndDisplayUpgrades();
+	//Equipment
+	checkAndDisplayEquipment();
+}
+
+/** Check to see if any new upgrades have been unlocked; if so, draw them.
+  */
+function checkAndDisplayUpgrades() {
+	var redrawNeeded = false;
 	for (var itemC in game.upgrades){
 		toUpdate = game.upgrades[itemC];
 		if (toUpdate.allowed - toUpdate.done >= 1) toUpdate.locked = 0;
 		if (toUpdate.locked == 1) continue;
-		if (document.getElementById(itemC) === null) unlockUpgrade(itemC, true);
+		// (1) if there's no element for this item, we need to add it
+		// (2) if there IS an element for this item, then we need to update it
+		//		However, there is no point in doing so if we're going to redraw the whole thing anyway.
+		if (document.getElementById(itemC) === null) 
+			redrawNeeded = true;
+		else if (!redrawNeeded)
+			document.getElementById(itemC + "Owned").innerHTML = getUpgradeOwnedText(toUpdate);
 	}
-	//Equipment
-	checkAndDisplayEquipment();
+	if (redrawNeeded)
+		redrawUpgrades();
 }
 
 function checkAndDisplayEquipment() {
@@ -1458,20 +1473,37 @@ function unlockMap(what) { //what here is the array index
 	//onmouseover="tooltip(\'' + item.id + '\',\'maps\',event)" onmouseout="tooltip(\'hide\')"
 }
 
-function unlockUpgrade(what, displayOnly) {
-	if (!displayOnly) game.global.lastUnlock = new Date().getTime();
+function unlockUpgrade(what) {
+	game.global.lastUnlock = new Date().getTime();
 	var upgrade = game.upgrades[what];
 	upgrade.locked = 0;
 	if (upgrade.prestiges){
 		var resName = (what == "Supershield") ? "wood" : "metal";
 		upgrade.cost.resources[resName] = getNextPrestigeCost(what);
 	}
-	
-	if (!displayOnly) {
-		upgrade.allowed++;
-	}
+	upgrade.allowed++;
+	// this will actually be performed on the next timer tick
+	// redrawCommon('upgrades', 'upgradesHere', drawUpgrade);
+}
 
+function redrawUpgrades() {
 	redrawCommon('upgrades', 'upgradesHere', drawUpgrade);
+}
+
+/** getUpgradeOwnedText(upgrade_object)
+  * upgrade_object: something pulled out of game.upgrades (e.g. game.upgrades['Supershield'])
+  */
+function getUpgradeOwnedText(upgrade)
+{
+	var done = upgrade.done;
+	var dif = upgrade.allowed - done;
+	if (dif >= 1) dif -= 1;
+	var doneStr;
+	if (dif >= 1)
+		doneStr = done + '(+' + dif + ')';
+	else
+		doneStr = done + '';
+	return doneStr;
 }
 
 function drawUpgrade(what, where){
@@ -1480,11 +1512,8 @@ function drawUpgrade(what, where){
 		var resName = (what == "Supershield") ? "wood" : "metal";
 		upgrade.cost.resources[resName] = getNextPrestigeCost(what);
 	}
-	var done = upgrade.done;
-	var dif = upgrade.allowed - done;
-	if (dif >= 1) dif -= 1;
-	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'upgrades\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer upgradeThing" id="' + what + '" onclick="buyUpgrade(\'' + what + '\')"><span id="' + what + 'Alert" class="alert badge"></span><span class="thingName">' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">' + done + '</span></div>';
-	if (dif >= 1) document.getElementById(what + "Owned").innerHTML = upgrade.done + "(+" + dif + ")";
+	var ownedText = getUpgradeOwnedText(upgrade);
+	where.innerHTML += '<div onmouseover="tooltip(\'' + what + '\',\'upgrades\',event)" onmouseout="tooltip(\'hide\')" class="thing noselect pointer upgradeThing" id="' + what + '" onclick="buyUpgrade(\'' + what + '\')"><span id="' + what + 'Alert" class="alert badge"></span><span class="thingName">' + what + '</span><br/><span class="thingOwned" id="' + what + 'Owned">' + ownedText + '</span></div>';
 }
 
 function checkButtons(what) {
